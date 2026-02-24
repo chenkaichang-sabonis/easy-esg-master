@@ -24,6 +24,7 @@
 | **分支** | `main` |
 | **公网 IP** | 139.196.89.245 |
 | **操作系统** | Ubuntu 24.04（与下文命令兼容） |
+| **服务器规格** | 2 核(vCPU)、2 GiB 内存、3 Mbps 带宽（默认最多 **10** 个用户同时生成报告，可通过 `ESG_MAX_CONCURRENT` 调整，见下方「并发限制」） |
 
 ### 其他需要提供/决定的信息（见下方逐项说明）
 
@@ -253,13 +254,43 @@ esg ALL=(ALL) NOPASSWD: /bin/systemctl restart esg-app
 
 ---
 
-## 八、私有 GitHub 仓库
+## 八、私有 GitHub 仓库与 cron 免密拉取
 
-若仓库为**私有**，服务器上需能拉取代码，任选其一：
+若仓库为**私有**，或定时更新时出现 `Username for 'https://github.com':` 提示，需配置免密拉取。任选其一：
 
-- **SSH 密钥**：在服务器上生成 SSH key，将公钥添加到 GitHub 仓库的 Deploy keys 或账号 SSH keys，clone 时使用 `git@github.com:用户名/easy-esg-master.git`。
-- **Personal Access Token（HTTPS）**：在 GitHub 创建带 `repo` 权限的 Token，clone 时使用：
-  `https://<TOKEN>@github.com/用户名/easy-esg-master.git`，或配置 Git 凭据存储。
+### 方式一：SSH 密钥（推荐）
+
+在服务器上以 **esg 用户**执行：
+
+```bash
+# 1. 生成 SSH 密钥（无密码）
+sudo -u esg ssh-keygen -t ed25519 -C "esg-server" -f /home/esg/.ssh/id_ed25519 -N ""
+
+# 2. 查看公钥，复制到 GitHub
+sudo -u esg cat /home/esg/.ssh/id_ed25519.pub
+```
+
+将公钥添加到 GitHub：**Settings → SSH and GPG keys → New SSH key**，或仓库 **Settings → Deploy keys**。
+
+```bash
+# 3. 将远程改为 SSH 地址（替换为你的用户名和仓库名）
+cd /home/esg/easy-esg
+sudo -u esg git remote set-url origin git@github.com:khilan24/easy-esg-master.git
+
+# 4. 测试（首次会提示确认 host key，输入 yes）
+sudo -u esg git fetch origin
+```
+
+### 方式二：Personal Access Token（HTTPS）
+
+在 GitHub 创建带 `repo` 权限的 Token，然后：
+
+```bash
+cd /home/esg/easy-esg
+# 将 <TOKEN> 替换为你的 Token
+sudo -u esg git remote set-url origin https://<TOKEN>@github.com/khilan24/easy-esg-master.git
+sudo -u esg git fetch origin
+```
 
 ---
 
@@ -279,3 +310,4 @@ esg ALL=(ALL) NOPASSWD: /bin/systemctl restart esg-app
 - **API Key**：由用户在前端页面填写，无需在服务器上创建 config.json；若你已创建 config.json，其在 `.gitignore` 中，不会随 `git pull` 被覆盖。
 - **output** 目录为报告输出，也在 `.gitignore` 中；若需保留历史报告，可在服务器上定期备份。
 - 若修改了 **项目目录** 或 **运行用户**，需同步修改 `deploy/systemd/esg-app.service` 并重新 `sudo cp` 与 `daemon-reload`。
+- **并发限制**：当前默认**最多 10 个用户同时生成报告**。可通过环境变量 `ESG_MAX_CONCURRENT` 调整（1～32）：在 systemd 服务中设置 `Environment=ESG_MAX_CONCURRENT=10`（或 2、3 等）后重启服务。若服务器规格较小（如 2 核/2 GiB），建议设为 2 以避免内存不足。

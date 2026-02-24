@@ -33,7 +33,12 @@ except ImportError:
 app = Flask(__name__, template_folder="templates", static_folder="static")
 app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024  # 50MB
 
-MAX_CONCURRENT = 3
+# 最大并发任务数，可通过环境变量 ESG_MAX_CONCURRENT 覆盖（1～32）
+_max = os.environ.get("ESG_MAX_CONCURRENT", "10")
+try:
+    MAX_CONCURRENT = max(1, min(32, int(_max)))
+except (TypeError, ValueError):
+    MAX_CONCURRENT = 10
 _jobs = {}  # job_id -> { status, message, log_tail, output_files, last_report_label, _proc?, cancelled? }
 _jobs_lock = threading.Lock()
 _log_max_lines = 200

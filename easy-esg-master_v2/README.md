@@ -6,7 +6,7 @@
 
 - **周报 / 日报**：周报研究「上周一至上周日」，日报研究「昨日」
 - **模型可选**：Gemini（Deep Research + Gemini 3 Pro）或千问（Qwen Deep Research + qwen3-max-preview 对话）
-- **流程**：阶段1 并行研究(E/S/G) → 阶段2 润色 → 阶段3 热点聚焦 → 阶段4 合并 → 阶段5 Word 与 PPT 填充
+- **流程**：阶段1 并行研究(E/S/G) → 阶段2 润色 → 阶段3 热点聚焦 → 阶段4 合并 → 阶段5 Word 填充
 - **使用方式**：Web 前端（推荐）或命令行；前端可填写 API Key，无需改 config
 
 ## 环境与安装
@@ -23,7 +23,7 @@ pip install -r requirements.txt
 1. 复制配置模板并编辑：
 
 ```bash
-cp config/config.json.example config.json
+cp config.json.example config.json
 ```
 
 2. **provider**：`"gemini"` 或 `"qwen"`，表示默认使用的模型；不填则默认 Gemini；前端选择会覆盖
@@ -32,7 +32,7 @@ cp config/config.json.example config.json
 
 配置采用 **gemini / qwen 分组**，避免混在一起；旧版平铺写法仍兼容。
 
-配置示例（`config/config.json.example`）：
+配置示例（`config.json.example`）：
 
 ```json
 {
@@ -68,7 +68,7 @@ python web/app.py
 - 选择**模型**：Gemini 或千问
 - 填写 **API Key**：千问填 1 个；Gemini 填 E、S、G 各 1 个（可选，不填则用 config）
 - 选择**报告类型**：周报 / 日报
-- 点击「生成报告」，页面会显示研究进展、耗时与运行日志，完成后可下载 Word、PPT、JSON
+- 点击「生成报告」，页面会显示研究进展、耗时与运行日志，完成后可下载 Word / JSON
 
 ### 2. 命令行
 
@@ -86,75 +86,61 @@ python main.py --mode daily --provider qwen
 - `--mode` / `-m`：`weekly`（周报）或 `daily`（日报）
 - `--provider` / `-p`：`gemini` 或 `qwen`，不传则使用 config 中的 `provider`
 
-### 3. 仅填充（每次输出 txt、json、word、pptx）
+### 3. 单独填充 Word
 
-若已有 JSON 报告，可只跑模板填充；**每次运行均保证输出四类文件**：`*_原始内容.txt`、`*_报告.json`、`*_最终版.docx`、`*_最终版.pptx`。固定使用 `templates/` 下的国信模板。
+若已有 JSON 报告，可只跑 Word 填充：
 
 ```bash
-python scripts/fill_template.py --json output/daily/YYYYMMDD_报告.json
-python scripts/fill_template.py   # 自动查找最新 JSON，并填充 Word + PPT
+python fill_template.py --json output/daily/YYYYMMDD_报告.json
 ```
 
-- `--json`：JSON 路径，不传则自动查找最新 `*_报告.json`
-
-不指定 `--json` 时会在 `output/weekly/`、`output/daily/` 下自动查找最新 `*_报告.json`。若输出目录缺少 `*_原始内容.txt`，脚本会从同类型目录复制或创建占位文件。
+不指定 `--json` 时会在 `output/weekly/`、`output/daily/` 下自动查找最新 `*_报告.json`。
 
 ## 输出目录与文件
 
 | 类型 | 目录 | 文件名示例 |
 |------|------|------------|
-| 周报 | `output/weekly/` | `*_原始内容.txt`、`*_报告.json`、`*_最终版.docx`、`*_最终版.pptx` |
-| 日报 | `output/daily/` | `*_原始内容.txt`、`*_报告.json`、`*_最终版.docx`、`*_最终版.pptx` |
+| 周报 | `output/weekly/` | `YYYYMMDD_YYYYMMDD_原始内容.txt`、`*_报告.json`、`*_最终版.docx` |
+| 日报 | `output/daily/` | `YYYYMMDD_原始内容.txt`、`YYYYMMDD_报告.json`、`YYYYMMDD_最终版.docx` |
 
-文件名以日期开头，便于排序与归档。需在 `templates/` 下放置国信模板（默认 `国信模板.docx`、`国信模板.pptx`，可在 `core/utils.py` 中修改常量）。
+文件名以日期开头，便于排序与归档。
 
 ## 项目结构
 
 ```
 easy-esg-master/
 ├── main.py                 # 主程序（--mode weekly|daily，--provider gemini|qwen）
+├── fill_template.py        # Word 填充命令行入口
+├── config.json.example     # 配置模板
 ├── requirements.txt
-├── config/                 # 配置
-│   └── config.json.example
-├── templates/              # Word/PPT 模板（默认 国信模板.docx、国信模板.pptx，见 core/utils.py）
-├── scripts/                # 命令行脚本
-│   └── fill_template.py   # Word + PPT 填充（每次输出 txt/json/docx/pptx）
-├── core/                   # 核心逻辑
+├── ESG研报模板.docx        # Word 模板
+├── core/
+│   ├── __init__.py
 │   ├── gemini_client.py    # Gemini API（Deep Research + 对话）
 │   ├── qwen_client.py      # 千问 API（Deep Research + 对话）
 │   ├── research_stages.py  # 研究流程（E/S/G 研究、润色、热点、合并）
 │   ├── progress.py         # 运行进度写入（供 Web 展示）
 │   └── utils.py            # 配置、日期、提示词、打印
-├── report/                 # 报告格式化与保存
-│   ├── report_formatter.py
-│   └── report_saver.py
-├── fill/                   # 模板填充（Word + PPT）
-│   ├── word_filler.py
-│   └── ppt_filler.py
-├── prompt/                 # 提示词（占位符按领域与日期替换）
+├── report/
+│   ├── report_formatter.py # 报告内容解析与结构化
+│   └── report_saver.py     # 保存原始内容与 JSON 报告
+├── word/
+│   ├── __init__.py
+│   └── word_filler.py      # Word 模板填充
+├── prompt/                  # 提示词（占位符按领域与日期替换）
 │   ├── 章节研究.txt
 │   ├── 章节润色.txt
 │   ├── 热点聚焦.txt
 │   └── 合并.txt
-├── web/                    # Web 前端
+├── web/
 │   ├── app.py              # Flask 后端（状态、进度、下载）
 │   └── templates/index.html
-├── deploy/                 # 阿里云部署
-│   ├── README.md           # 部署说明
-│   ├── systemd/            # systemd 服务
-│   ├── nginx/              # Nginx 配置（8080 端口）
-│   └── scripts/            # 更新脚本
-├── .cursor/skills/         # Cursor IDE 技能（esg-report、frontend-design）
 └── output/
     ├── weekly/             # 周报输出
     └── daily/              # 日报输出
 ```
 
-- `.cursor/skills/` 为 Cursor IDE 技能与参考，用于 AI 辅助开发，已纳入仓库。
-
-## 部署（阿里云）
-
-若需在阿里云 ECS 上部署 Web 服务（8080 端口），参见 [deploy/README.md](deploy/README.md)。内含 systemd、Nginx 配置与一键更新脚本，版本迭代可通过 GitHub 拉取后执行 `deploy/scripts/update.sh` 完成。
+若存在 `.cursor/skills/`，为 Cursor IDE 技能与参考，与主程序无关；可手动删除该目录以精简仓库。
 
 ## 注意事项
 

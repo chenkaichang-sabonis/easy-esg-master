@@ -8,12 +8,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 import threading
 
-# 项目根目录（按 core/utils.py 所在位置解析，不依赖当前工作目录，避免 Web 子进程 cwd 异常时找不到模板）
-_PROJECT_ROOT = Path(__file__).resolve().parent.parent
-
-# 支持 Web 多任务：环境变量 ESG_JOB_ID 存在时，输出到 output/<job_id>/，否则 output/（路径基于项目根）
-_job_id = os.environ.get("ESG_JOB_ID", "")
-OUTPUT_BASE = str(_PROJECT_ROOT / "output" / _job_id) if _job_id else str(_PROJECT_ROOT / "output")
+OUTPUT_BASE = "output"
 
 # 线程锁用于打印
 print_lock = threading.Lock()
@@ -40,36 +35,32 @@ def safe_print(*args, **kwargs):
 
 def load_config(provider_override=None, api_key_override=None):
     """
-    从配置文件加载配置；无 config.json 时仅从环境变量（ESG_RUNTIME_API_KEY 等）构建配置。
+    从配置文件加载配置。
     provider_override: 可选 "gemini" | "qwen"，覆盖 config 中的 provider。
     api_key_override: 可选，前端或环境传入的 API Key（ESG_RUNTIME_API_KEY），优先于 config 使用。
     """
-    config_path = _PROJECT_ROOT / "config.json"
-    if config_path.exists():
-        with open(config_path, "r", encoding="utf-8") as f:
-            config = json.load(f)
-        def _g(key, default=None):
-            return config.get(key, default)
-        _gemini = config.get("gemini") if isinstance(config.get("gemini"), dict) else {}
-        _qwen = config.get("qwen") if isinstance(config.get("qwen"), dict) else {}
-        config.setdefault("api_key", _gemini.get("api_key") or _g("api_key"))
-        config.setdefault("api_keys", _gemini.get("api_keys") or _g("api_keys"))
-        config.setdefault("agent", _gemini.get("agent") or _g("agent", "deep-research-pro-preview-12-2025"))
-        config.setdefault("model", _gemini.get("model") or _g("model", "gemini-3-pro-preview"))
-        config.setdefault("qwen_api_key", _qwen.get("api_key") or _g("qwen_api_key"))
-        config.setdefault("qwen_model", _qwen.get("model") or _g("qwen_model", "qwen3-max-preview"))
-        config.setdefault("qwen_deep_research_model", _qwen.get("deep_research_model") or _g("qwen_deep_research_model", "qwen-deep-research"))
-    else:
-        # 无 config.json 时使用默认值，Key 仅从环境变量读取（由前端经 app 传入）
-        config = {
-            "api_key": None,
-            "api_keys": None,
-            "agent": "deep-research-pro-preview-12-2025",
-            "model": "gemini-3-pro-preview",
-            "qwen_api_key": None,
-            "qwen_model": "qwen3-max-preview",
-            "qwen_deep_research_model": "qwen-deep-research",
-        }
+    config_path = "config.json"
+    if not os.path.exists(config_path):
+        raise FileNotFoundError(
+            f"配置文件 {config_path} 不存在。请复制 config.json.example 为 config.json。"
+        )
+
+    with open(config_path, "r", encoding="utf-8") as f:
+        config = json.load(f)
+
+    # 支持嵌套结构 gemini / qwen，与旧版平铺键兼容
+    def _g(key, default=None):
+        return config.get(key, default)
+    # 从嵌套或平铺读取：Gemini 用 api_key / api_keys / agent / model，千问用 qwen_api_key / qwen_model / qwen_deep_research_model
+    _gemini = config.get("gemini") if isinstance(config.get("gemini"), dict) else {}
+    _qwen = config.get("qwen") if isinstance(config.get("qwen"), dict) else {}
+    config.setdefault("api_key", _gemini.get("api_key") or _g("api_key"))
+    config.setdefault("api_keys", _gemini.get("api_keys") or _g("api_keys"))
+    config.setdefault("agent", _gemini.get("agent") or _g("agent", "deep-research-pro-preview-12-2025"))
+    config.setdefault("model", _gemini.get("model") or _g("model", "gemini-3-pro-preview"))
+    config.setdefault("qwen_api_key", _qwen.get("api_key") or _g("qwen_api_key"))
+    config.setdefault("qwen_model", _qwen.get("model") or _g("qwen_model", "qwen3-max-preview"))
+    config.setdefault("qwen_deep_research_model", _qwen.get("deep_research_model") or _g("qwen_deep_research_model", "qwen-deep-research"))
 
     provider = provider_override or config.get("provider", "gemini")
     if provider not in ("gemini", "qwen"):
@@ -122,11 +113,12 @@ def load_config(provider_override=None, api_key_override=None):
 
 
 def load_prompt(prompt_file):
-    """加载提示词文件（路径基于项目根，不依赖当前工作目录）"""
-    prompt_path = _PROJECT_ROOT / "prompt" / prompt_file
-    if not prompt_path.exists():
+    """加载提示词文件"""
+    prompt_path = os.path.join("prompt", prompt_file)
+    if not os.path.exists(prompt_path):
         raise FileNotFoundError(f"提示词文件 {prompt_path} 不存在")
-    with open(prompt_path, "r", encoding="utf-8") as f:
+    
+    with open(prompt_path, 'r', encoding='utf-8') as f:
         return f.read()
 
 
@@ -189,18 +181,6 @@ def get_output_subdir(date_info):
     return os.path.join(OUTPUT_BASE, report_type)
 
 
-# 模板文件名（若已重命名，请直接改这里）
-TEMPLATE_DOCX_FILENAME = "国信模板.docx"
-TEMPLATE_PPTX_FILENAME = "国信模板.pptx"
-
-
-def get_template_path(ext):
-    """返回 Word(.docx) 或 PPT(.pptx) 模板的绝对路径，使用上方常量中的文件名。"""
-    name = TEMPLATE_DOCX_FILENAME if ext in ("docx", ".docx") else TEMPLATE_PPTX_FILENAME
-    p = _PROJECT_ROOT / "templates" / name
-    return str(p) if p.exists() else str(_PROJECT_ROOT / name)
-
-
 def get_latest_output_subdir(base_dir=None):
     """
     在 output 下查找「最近一次生成」的目录：比较 weekly/ 与 daily/ 内文件最新修改时间。
@@ -215,7 +195,7 @@ def get_latest_output_subdir(base_dir=None):
         kind_dir = base / kind
         if not kind_dir.is_dir():
             continue
-        mtime = max((f.stat().st_mtime for f in kind_dir.rglob("*") if f.is_file()), default=0)
+        mtime = max((f.stat().st_mtime for f in kind_dir.iterdir() if f.is_file()), default=0)
         if mtime > best_mtime:
             best_mtime = mtime
             best_subdir = kind
@@ -253,7 +233,6 @@ def find_latest_report_json(base_dir=None):
 def list_output_files_in_subdir(subdir_rel, base_dir=None):
     """
     列出指定目录下的文件，返回相对 base_dir 的路径列表，用于下载等。
-    支持嵌套子目录（如 weekly/20260119_gemini/xxx.pptx）。
     subdir_rel: "weekly" 或 "daily"
     返回: [('最终版.docx', 'weekly/最终版.docx'), ...]
     """
@@ -262,14 +241,10 @@ def list_output_files_in_subdir(subdir_rel, base_dir=None):
     if not folder.is_dir():
         return []
     out = []
-    seen = set()
-    for f in folder.rglob("*"):
+    for f in folder.iterdir():
         if f.is_file() and not f.name.startswith("~$"):
             rel = f.relative_to(base)
-            rel_str = str(rel).replace("\\", "/")
-            if rel_str not in seen:
-                seen.add(rel_str)
-                out.append((f.name, rel_str))
+            out.append((f.name, str(rel).replace("\\", "/")))
     return out
 
 

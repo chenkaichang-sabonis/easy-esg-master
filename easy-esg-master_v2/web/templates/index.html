@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <title>国信证券 · ESG 研报工作台</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Plus+Jakarta+Sans:wght@500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0c10;
+      --bg-elevated: #111318;
+      --surface: #161a21;
+      --surface-hover: #1c2129;
+      --border: rgba(255, 255, 255, 0.06);
+      --border-strong: rgba(255, 255, 255, 0.12);
+      --text: #e6e9ef;
+      --text-muted: #8892a0;
+      --accent: #0d9488;
+      --accent-hover: #14b8a6;
+      --accent-soft: rgba(13, 148, 136, 0.12);
+      --success: #34d399;
+      --success-soft: rgba(52, 211, 153, 0.12);
+      --warning: #fbbf24;
+      --warning-soft: rgba(251, 191, 36, 0.12);
+      --error: #f87171;
+      --error-soft: rgba(248, 113, 113, 0.12);
+      --radius: 16px;
+      --radius-sm: 12px;
+      --font-display: "Plus Jakarta Sans", "Noto Sans SC", sans-serif;
+      --font-hero: "DM Serif Display", "Noto Sans SC", serif;
+      --font-body: "Noto Sans SC", "Plus Jakarta Sans", sans-serif;
+      --shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+      --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.4);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.65;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      min-height: 100vh;
+      padding: 0;
+      background-image:
+        radial-gradient(ellipse 140% 90% at 50% -30%, rgba(13, 148, 136, 0.06), transparent 50%),
+        radial-gradient(ellipse 60% 40% at 90% 80%, rgba(13, 148, 136, 0.03), transparent);
+    }
+
+    .app {
+      width: 100%;
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 2rem 2.5rem 3rem;
+    }
+
+    /* 主操作区：生成报告 | 研究进展与耗时 */
+    .row-primary {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+    @media (min-width: 960px) {
+      .row-primary {
+        grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+      }
+      .row-primary .progress-card { min-height: 260px; }
+    }
+
+    /* 研究进展卡片：无数据时占位，避免右侧空洞 */
+    .progress-card .progress-placeholder {
+      padding: 1.5rem 0;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+    .progress-card.has-data .progress-placeholder { display: none; }
+    .progress-card:not(.has-data) .progress-summary,
+    .progress-card:not(.has-data) .progress-timeline { display: none; }
+
+    /* 下载结果横条 */
+    .download-card-fullwidth {
+      margin-bottom: 1.25rem;
+      width: 100%;
+    }
+    .download-card-fullwidth .downloads {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+      align-items: flex-start;
+      margin-top: 1rem;
+    }
+    .download-card-fullwidth .download-group {
+      flex: 1;
+      min-width: 220px;
+    }
+    @media (max-width: 960px) {
+      .download-card-fullwidth .downloads {
+        flex-direction: column;
+        gap: 1rem;
+      }
+      .download-card-fullwidth .download-group {
+        min-width: 100%;
+      }
+    }
+
+    /* 输出区：运行日志 | 使用说明 */
+    .app-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.25rem;
+    }
+    @media (min-width: 960px) {
+      .app-grid {
+        grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+        gap: 1.5rem;
+      }
+      .app-grid .span-full { grid-column: 1 / -1; }
+      .app-grid .card { margin-bottom: 0; }
+      .card-log .log-box { max-height: 380px; }
+    }
+
+    .app-side {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    /* 品牌与主标题 */
+    .brand {
+      font-family: var(--font-display);
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 0.5rem;
+      animation: fadeUp 0.5s ease-out;
+    }
+
+    .hero h1 {
+      font-family: var(--font-hero);
+      font-size: 2.1rem;
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      margin: 0 0 0.75rem 0;
+      color: var(--text);
+      line-height: 1.2;
+      animation: fadeUp 0.5s ease-out 0.05s backwards;
+    }
+
+    .hero .subtitle {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      margin: 0 0 2rem 0;
+      max-width: 52em;
+      animation: fadeUp 0.5s ease-out 0.1s backwards;
+    }
+
+    .hero {
+      padding-bottom: 2rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 2rem;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(14px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.6rem 1.75rem;
+      margin-bottom: 1.25rem;
+      box-shadow: var(--shadow);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      animation: fadeUp 0.5s ease-out backwards;
+    }
+    .row-primary .card,
+    .app-grid .card { margin-bottom: 0; }
+
+    .card:nth-of-type(1) { animation-delay: 0.08s; }
+    .card:nth-of-type(2) { animation-delay: 0.14s; }
+    .card:nth-of-type(3) { animation-delay: 0.2s; }
+    .card:nth-of-type(4) { animation-delay: 0.26s; }
+    .card:nth-of-type(5) { animation-delay: 0.32s; }
+    .card:nth-of-type(6) { animation-delay: 0.38s; }
+
+    .card:hover {
+      border-color: var(--border-strong);
+      box-shadow: var(--shadow-lg);
+    }
+
+    #configAlert {
+      margin-bottom: 1.25rem;
+      animation: fadeUp 0.4s ease-out;
+    }
+
+    .alert {
+      padding: 0.9rem 1.1rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.9rem;
+      border: 1px solid transparent;
+    }
+
+    .alert.warning {
+      background: var(--warning-soft);
+      color: var(--warning);
+      border-color: rgba(251, 191, 36, 0.25);
+    }
+
+    .alert.error {
+      background: var(--error-soft);
+      color: var(--error);
+      border-color: rgba(248, 113, 113, 0.25);
+    }
+
+    .card-title {
+      font-family: var(--font-display);
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text);
+      margin: 0 0 1rem 0;
+      letter-spacing: 0.02em;
+    }
+
+    .mode-group { margin-bottom: 1.25rem; }
+
+    .mode-label {
+      display: block;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 0.6rem;
+    }
+
+    .mode-tabs {
+      display: inline-flex;
+      padding: 5px;
+      background: var(--bg-elevated);
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+    }
+
+    .mode-tabs label {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.5rem 1.1rem;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      border-radius: 8px;
+      transition: background 0.2s ease, color 0.2s ease;
+    }
+
+    .mode-tabs label:hover { color: var(--text); }
+
+    .mode-tabs input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .mode-tabs input:checked + span {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .api-key-input {
+      width: 100%;
+      padding: 0.65rem 1rem;
+      font-family: var(--font-body);
+      font-size: 0.9rem;
+      color: var(--text);
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      outline: none;
+      transition: border-color 0.2s ease;
+    }
+    .api-key-input::placeholder {
+      color: var(--text-muted);
+    }
+    .api-key-input:focus {
+      border-color: var(--accent);
+    }
+
+    .api-keys-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 0.75rem;
+    }
+    @media (max-width: 560px) {
+      .api-keys-row { grid-template-columns: 1fr; }
+    }
+    .api-key-item label {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: 0.35rem;
+    }
+    .api-key-item .api-key-input { width: 100%; }
+
+    .mode-tabs label span {
+      padding: 0.25rem 0.5rem;
+      border-radius: 6px;
+    }
+
+    .action-row {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-top: 1.25rem;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.4rem 0.85rem;
+      font-size: 0.8rem;
+      font-weight: 500;
+      border-radius: 999px;
+      transition: background 0.25s ease, color 0.25s ease;
+    }
+
+    .status-badge::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .status-badge.idle { background: var(--border); color: var(--text-muted); }
+    .status-badge.running { background: var(--accent-soft); color: var(--accent); }
+    .status-badge.running::before { animation: pulse 1.2s ease-in-out infinite; }
+    .status-badge.done { background: var(--success-soft); color: var(--success); }
+    .status-badge.error { background: var(--error-soft); color: var(--error); }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.2); }
+    }
+
+    #statusMessage {
+      margin: 0;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      min-height: 1.4em;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.8rem 1.6rem;
+      font-family: var(--font-display);
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #fff;
+      background: var(--accent);
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+      box-shadow: 0 2px 14px rgba(13, 148, 136, 0.35);
+    }
+
+    .btn:hover {
+      background: var(--accent-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 24px rgba(13, 148, 136, 0.4);
+    }
+
+    .btn:active { transform: translateY(0); }
+    .btn:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
+
+    .spinner {
+      display: inline-block;
+      width: 1em;
+      height: 1em;
+      border: 2px solid currentColor;
+      border-right-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .log-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 1rem 1.1rem;
+      font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
+      font-size: 0.8rem;
+      line-height: 1.5;
+      max-height: 320px;
+      min-height: 200px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      color: var(--text-muted);
+    }
+
+    .log-box:empty::before {
+      content: "暂无日志";
+      color: var(--text-muted);
+      opacity: 0.7;
+    }
+
+    /* 研究进展与耗时 */
+    .progress-card { animation-delay: 0.12s; }
+    .progress-summary {
+      margin-bottom: 1.5rem;
+      padding: 1rem 1.25rem;
+      background: var(--bg-elevated);
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+    }
+    .progress-total-label {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 0.35rem;
+    }
+    .progress-total-value {
+      font-family: var(--font-display);
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: -0.02em;
+    }
+    .progress-timeline { margin-top: 0.5rem; }
+    .progress-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .progress-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      padding: 0.85rem 0;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.2s ease, border-color 0.2s ease;
+    }
+    .progress-step:last-child { border-bottom: none; }
+    .progress-step.completed {
+      border-left: 3px solid var(--success);
+      padding-left: 0.5rem;
+      margin-left: -0.5rem;
+      border-radius: 0 6px 6px 0;
+    }
+    .progress-step.current {
+      background: var(--accent-soft);
+      border-left: 3px solid var(--accent);
+      padding-left: 0.5rem;
+      margin-left: -0.5rem;
+      border-radius: 0 6px 6px 0;
+    }
+    .progress-step.pending { opacity: 0.6; }
+    .progress-step-marker {
+      flex-shrink: 0;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      background: var(--surface-hover);
+      color: var(--text-muted);
+      border: 2px solid var(--border);
+    }
+    .progress-step.completed .progress-step-marker {
+      background: var(--success-soft);
+      color: var(--success);
+      border-color: var(--success);
+    }
+    .progress-step.current .progress-step-marker {
+      background: var(--accent-soft);
+      color: var(--accent);
+      border-color: var(--accent);
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+    .progress-step.current .progress-step-marker::before { content: ""; }
+    .progress-step.current .progress-step-marker {
+      position: relative;
+    }
+    .progress-step.current .progress-step-marker::after {
+      content: "";
+      position: absolute;
+      inset: -3px;
+      border-radius: 50%;
+      border: 2px solid var(--accent);
+      opacity: 0.4;
+      animation: pulse-ring 1.5s ease-out infinite;
+    }
+    @keyframes pulse-ring {
+      0% { transform: scale(0.8); opacity: 0.5; }
+      100% { transform: scale(1.4); opacity: 0; }
+    }
+    .progress-step-body { flex: 1; min-width: 0; }
+    .progress-step-title {
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: var(--text);
+      margin-bottom: 0.2rem;
+    }
+    .progress-step-duration {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    .progress-step-duration strong { color: var(--accent); }
+
+    .downloads {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin-top: 0.5rem;
+    }
+    .download-card-fullwidth .downloads {
+      flex-direction: row;
+      gap: 1rem;
+    }
+
+    .download-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .download-type-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.25rem;
+    }
+
+    .download-link {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.55rem 1rem;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border: 1px solid rgba(13, 148, 136, 0.25);
+      border-radius: 8px;
+      text-decoration: none;
+      transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+      width: fit-content;
+      white-space: nowrap;
+    }
+
+    .download-link:hover {
+      background: rgba(13, 148, 136, 0.22);
+      color: var(--accent-hover);
+      border-color: var(--accent);
+    }
+    
+    .download-card-fullwidth .download-link {
+      width: 100%;
+      justify-content: center;
+    }
+
+    .download-hint {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 0.75rem;
+      line-height: 1.5;
+    }
+
+    .help-card {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+    }
+
+    .help-card ul {
+      margin: 0.5rem 0 0 1.2rem;
+      padding: 0;
+    }
+
+    .help-card li { margin-bottom: 0.35rem; }
+
+    .footer {
+      margin-top: 2.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="hero">
+      <div class="brand">国信证券</div>
+      <h1>ESG 研报工作台</h1>
+      <p class="subtitle">一键生成周报（上周一至上周日）或日报（昨日），输出 Word、JSON 与原始内容；文件名日期在前，便于归档。</p>
+    </header>
+
+    <div id="configAlert" class="alert warning" style="display: none;"></div>
+
+    <div class="row-primary">
+      <div class="card card-run">
+        <h2 class="card-title">生成报告</h2>
+      <div class="mode-group">
+        <span class="mode-label">模型 / 服务</span>
+        <div class="mode-tabs" id="providerTabs">
+          <label>
+            <input type="radio" name="provider" value="gemini" checked>
+            <span>Gemini</span>
+          </label>
+          <label>
+            <input type="radio" name="provider" value="qwen">
+            <span>千问（Qwen）</span>
+          </label>
+        </div>
+      </div>
+      <div class="mode-group" id="apiKeyGroupQwen">
+        <span class="mode-label">千问 API Key</span>
+        <input type="password" id="apiKeyInput" class="api-key-input" placeholder="请输入千问 API Key（可选，不填则使用 config.json）" autocomplete="off">
+      </div>
+      <div class="mode-group" id="apiKeyGroupGemini" style="display: none;">
+        <span class="mode-label">Gemini API Key（E / S / G 各一个，用于并行研究）</span>
+        <div class="api-keys-row">
+          <div class="api-key-item">
+            <label for="apiKeyE">环境（E）</label>
+            <input type="password" id="apiKeyE" class="api-key-input" placeholder="E 领域 Key" autocomplete="off">
+          </div>
+          <div class="api-key-item">
+            <label for="apiKeyS">社会（S）</label>
+            <input type="password" id="apiKeyS" class="api-key-input" placeholder="S 领域 Key" autocomplete="off">
+          </div>
+          <div class="api-key-item">
+            <label for="apiKeyG">治理（G）</label>
+            <input type="password" id="apiKeyG" class="api-key-input" placeholder="G 领域 Key" autocomplete="off">
+          </div>
+        </div>
+      </div>
+      <div class="mode-group">
+        <span class="mode-label">报告类型</span>
+        <div class="mode-tabs">
+          <label>
+            <input type="radio" name="mode" value="weekly" checked>
+            <span>周报（上周）</span>
+          </label>
+          <label>
+            <input type="radio" name="mode" value="daily">
+            <span>日报（昨日）</span>
+          </label>
+        </div>
+      </div>
+      <div class="action-row">
+        <div id="statusBadge" class="status-badge idle">就绪</div>
+        <button id="btnRun" class="btn">生成报告</button>
+      </div>
+      <p id="statusMessage"></p>
+      </div>
+
+      <div id="progressCard" class="card progress-card">
+        <h2 class="card-title">研究进展与耗时</h2>
+        <div class="progress-placeholder" id="progressPlaceholder">
+          选择模型并点击「生成报告」后，此处将显示研究阶段与运行耗时。
+        </div>
+        <div class="progress-summary">
+          <div class="progress-total">
+            <span class="progress-total-label">运行总时长</span>
+            <span id="totalElapsed" class="progress-total-value">—</span>
+          </div>
+        </div>
+        <div class="progress-timeline">
+          <div class="progress-steps" id="progressSteps"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="downloadCard" class="card download-card-fullwidth" style="display: none;">
+      <h2 class="card-title" id="downloadTitle">下载结果</h2>
+      <div id="downloads" class="downloads"></div>
+      <p class="download-hint">报告生成完成后，文件已保存到 output 目录。您可以选择下载以下文件：原始内容（TXT）、结构化报告（JSON）、Word 最终版（DOCX）。</p>
+    </div>
+
+    <div class="app-grid">
+      <div class="card card-log">
+        <h2 class="card-title">运行日志</h2>
+        <div id="logBox" class="log-box" tabindex="0"></div>
+      </div>
+      <div class="app-side">
+        <div class="card help-card">
+          <h2 class="card-title">使用说明</h2>
+          <ul>
+            <li><strong>周报</strong>：研究区间为上周一至上周日，输出至 <code>output/weekly/</code>。</li>
+            <li><strong>日报</strong>：研究区间为昨日（当前日期的前一天），输出至 <code>output/daily/</code>。</li>
+            <li>每次生成会得到三个文件：原始内容（.txt）、结构化报告（.json）、Word 最终版（.docx），文件名均以日期开头。</li>
+            <li>生成过程中请勿关闭页面；完成后可直接在下方下载，或到对应目录查看。</li>
+            <li><strong>API Key</strong>：选择模型后在上方输入。Gemini 需填写 E、S、G 三个 Key（用于并行研究）；千问只需一个。仅用于当次运行、不会保存；不填则使用 config.json 中已配置的 Key。</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <footer class="footer">
+      国信证券 ESG 研报工作台 · 周报 / 日报一键生成
+    </footer>
+  </div>
+
+  <script>
+    const statusBadge = document.getElementById('statusBadge');
+    const statusMessage = document.getElementById('statusMessage');
+    const btnRun = document.getElementById('btnRun');
+    const logBox = document.getElementById('logBox');
+    const configAlert = document.getElementById('configAlert');
+    const downloadCard = document.getElementById('downloadCard');
+    const downloadTitle = document.getElementById('downloadTitle');
+    const downloadsEl = document.getElementById('downloads');
+    const progressCard = document.getElementById('progressCard');
+    const totalElapsedEl = document.getElementById('totalElapsed');
+    const progressStepsEl = document.getElementById('progressSteps');
+    const apiKeyInput = document.getElementById('apiKeyInput');
+    const apiKeyGroupQwen = document.getElementById('apiKeyGroupQwen');
+    const apiKeyGroupGemini = document.getElementById('apiKeyGroupGemini');
+    const apiKeyE = document.getElementById('apiKeyE');
+    const apiKeyS = document.getElementById('apiKeyS');
+    const apiKeyG = document.getElementById('apiKeyG');
+
+    const STAGE_ORDER = [
+      { id: 'stage1', label: 'Deep Research（E/S/G）' },
+      { id: 'stage2', label: '润色（E/S/G）' },
+      { id: 'stage3', label: '热点聚焦' },
+      { id: 'stage4', label: '合并报告' },
+      { id: 'stage5', label: 'Word 填充' }
+    ];
+
+    let pollTimer = null;
+    let elapsedTickTimer = null;
+
+    function formatDuration(sec) {
+      if (sec == null || isNaN(sec)) return '—';
+      const m = Math.floor(sec / 60);
+      const s = Math.floor(sec % 60);
+      if (m > 0) return m + ' 分 ' + s + ' 秒';
+      return s + ' 秒';
+    }
+
+    function renderProgress(progress, status) {
+      if (!progress) {
+        progressCard.classList.remove('has-data');
+        if (elapsedTickTimer) { clearInterval(elapsedTickTimer); elapsedTickTimer = null; }
+        return;
+      }
+      progressCard.classList.add('has-data');
+      const totalSec = progress.total_elapsed_sec;
+      const totalStartedAt = progress.total_started_at;
+      const currentStage = progress.current_stage || '';
+      const completed = progress.completed_stages || [];
+      const completedMap = {};
+      completed.forEach(function (s) { completedMap[s.id] = s; });
+
+      if (status === 'running' && totalStartedAt != null) {
+        function updateElapsed() {
+          const startMs = typeof totalStartedAt === 'number' ? totalStartedAt * 1000 : new Date(totalStartedAt).getTime();
+          if (isNaN(startMs)) return;
+          const sec = (Date.now() - startMs) / 1000;
+          totalElapsedEl.textContent = formatDuration(sec);
+        }
+        updateElapsed();
+        if (elapsedTickTimer) clearInterval(elapsedTickTimer);
+        elapsedTickTimer = setInterval(updateElapsed, 1000);
+      } else {
+        if (elapsedTickTimer) { clearInterval(elapsedTickTimer); elapsedTickTimer = null; }
+        totalElapsedEl.textContent = formatDuration(totalSec);
+      }
+
+      let html = '';
+      STAGE_ORDER.forEach(function (s, i) {
+        const isCompleted = completedMap[s.id];
+        const isCurrent = currentStage === s.id;
+        const isPending = !isCompleted && !isCurrent;
+        let cls = 'progress-step';
+        if (isCompleted) cls += ' completed';
+        else if (isCurrent) cls += ' current';
+        else if (isPending) cls += ' pending';
+        const duration = isCompleted ? formatDuration(isCompleted.duration_sec) : '';
+        const durationHtml = duration ? '<div class="progress-step-duration">耗时 <strong>' + escapeHtml(duration) + '</strong></div>' : '';
+        const markerContent = isCompleted ? '✓' : (i + 1);
+        html += '<div class="' + cls + '" data-stage="' + escapeHtml(s.id) + '">';
+        html += '<div class="progress-step-marker">' + markerContent + '</div>';
+        html += '<div class="progress-step-body"><div class="progress-step-title">' + escapeHtml(s.label) + '</div>' + durationHtml + '</div></div>';
+      });
+      progressStepsEl.innerHTML = html;
+    }
+
+    function clearProgressUI() {
+      progressCard.classList.remove('has-data');
+      if (elapsedTickTimer) { clearInterval(elapsedTickTimer); elapsedTickTimer = null; }
+    }
+
+    function setStatus(s, msg) {
+      statusBadge.textContent = { idle: '就绪', running: '运行中', done: '完成', error: '失败' }[s] || s;
+      statusBadge.className = 'status-badge ' + s;
+      statusMessage.textContent = msg || '';
+    }
+
+    function showConfigAlert(ok, message) {
+      if (!ok && message) {
+        configAlert.textContent = message;
+        configAlert.className = 'alert error';
+        configAlert.style.display = 'block';
+      } else {
+        configAlert.style.display = 'none';
+      }
+    }
+
+    async function fetchStatus() {
+      try {
+        const r = await fetch('/api/status');
+        const d = await r.json();
+        setStatus(d.status, d.message);
+        if (d.log_tail && d.log_tail.length) {
+          // 清理可能的乱码字符
+          const cleanedLogs = d.log_tail.map(line => {
+            // 移除明显的乱码模式（连续的替换字符）
+            return line.replace(/\uFFFD+/g, '[编码错误]').replace(/\u0000/g, '');
+          });
+          logBox.textContent = cleanedLogs.join('\n');
+          logBox.scrollTop = logBox.scrollHeight;
+        }
+        if (d.progress) {
+          renderProgress(d.progress, d.status);
+        } else {
+          clearProgressUI();
+        }
+        if (d.status === 'running') {
+          btnRun.disabled = true;
+          btnRun.innerHTML = '<span class="spinner"></span> 生成中…';
+          if (!pollTimer) pollTimer = setInterval(fetchStatus, 3000);
+        } else {
+          btnRun.disabled = false;
+          btnRun.textContent = '生成报告';
+          if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+          if (elapsedTickTimer) { clearInterval(elapsedTickTimer); elapsedTickTimer = null; }
+        }
+        if (d.status === 'done') {
+          downloadCard.style.display = 'block';
+          downloadCard.style.animation = 'fadeUp 0.4s ease-out';
+          const label = d.last_report_label || '';
+          downloadTitle.textContent = label ? '下载结果（' + label + '）' : '下载结果';
+          
+          if (d.output_files && d.output_files.length > 0) {
+            // 按文件类型分类
+            const filesByType = {
+              txt: [],
+              json: [],
+              docx: []
+            };
+            d.output_files.forEach(f => {
+              const name = f.name.toLowerCase();
+              if (name.endsWith('.txt')) {
+                filesByType.txt.push(f);
+              } else if (name.endsWith('.json')) {
+                filesByType.json.push(f);
+              } else if (name.endsWith('.docx')) {
+                filesByType.docx.push(f);
+              }
+            });
+            
+            // 构建下载链接HTML
+            let html = '';
+            if (filesByType.txt.length > 0) {
+              html += '<div class="download-group"><div class="download-type-label">📄 原始内容（TXT）</div>';
+              filesByType.txt.forEach(f => {
+                html += '<a href="/api/download/' + encodeURIComponent(f.path) + '" download class="download-link">' + escapeHtml(f.name) + '</a>';
+              });
+              html += '</div>';
+            }
+            if (filesByType.json.length > 0) {
+              html += '<div class="download-group"><div class="download-type-label">📊 结构化报告（JSON）</div>';
+              filesByType.json.forEach(f => {
+                html += '<a href="/api/download/' + encodeURIComponent(f.path) + '" download class="download-link">' + escapeHtml(f.name) + '</a>';
+              });
+              html += '</div>';
+            }
+            if (filesByType.docx.length > 0) {
+              html += '<div class="download-group"><div class="download-type-label">📝 Word 最终版（DOCX）</div>';
+              filesByType.docx.forEach(f => {
+                html += '<a href="/api/download/' + encodeURIComponent(f.path) + '" download class="download-link">' + escapeHtml(f.name) + '</a>';
+              });
+              html += '</div>';
+            }
+            downloadsEl.innerHTML = html || '<p style="color: var(--text-muted); font-size: 0.9rem;">未找到可下载的文件</p>';
+          } else {
+            downloadsEl.innerHTML = '<p style="color: var(--text-muted); font-size: 0.9rem;">未找到输出文件，请检查 output 目录</p>';
+          }
+        }
+        if (d.status === 'error') {
+          downloadCard.style.display = 'none';
+        }
+      } catch (e) {
+        setStatus('error', '获取状态失败');
+        if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+        if (elapsedTickTimer) { clearInterval(elapsedTickTimer); elapsedTickTimer = null; }
+        btnRun.disabled = false;
+        btnRun.textContent = '生成报告';
+      }
+    }
+
+    function getMode() {
+      const el = document.querySelector('input[name="mode"]:checked');
+      return el ? el.value : 'weekly';
+    }
+
+    function getProvider() {
+      const el = document.querySelector('input[name="provider"]:checked');
+      return el ? el.value : 'gemini';
+    }
+
+    function updateApiKeyUI() {
+      var p = getProvider();
+      if (apiKeyGroupQwen) apiKeyGroupQwen.style.display = p === 'qwen' ? 'block' : 'none';
+      if (apiKeyGroupGemini) apiKeyGroupGemini.style.display = p === 'gemini' ? 'block' : 'none';
+    }
+
+    function escapeHtml(s) {
+      const div = document.createElement('div');
+      div.textContent = s;
+      return div.innerHTML;
+    }
+
+    document.querySelectorAll('input[name="provider"]').forEach(function (radio) {
+      radio.addEventListener('change', updateApiKeyUI);
+    });
+    updateApiKeyUI();
+
+    btnRun.addEventListener('click', async () => {
+      try {
+        const mode = getMode();
+        const provider = getProvider();
+        var apiKey = '';
+        var apiKeys = null;
+        if (provider === 'qwen') {
+          apiKey = (apiKeyInput && apiKeyInput.value) ? apiKeyInput.value.trim() : '';
+        } else {
+          var e = (apiKeyE && apiKeyE.value) ? apiKeyE.value.trim() : '';
+          var s = (apiKeyS && apiKeyS.value) ? apiKeyS.value.trim() : '';
+          var g = (apiKeyG && apiKeyG.value) ? apiKeyG.value.trim() : '';
+          if (e || s || g) apiKeys = { E: e, S: s, G: g };
+        }
+        const r = await fetch('/api/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mode: mode, provider: provider, api_key: apiKey, api_keys: apiKeys })
+        });
+        const d = await r.json();
+        if (!d.ok) {
+          alert(d.message || '启动失败');
+          showConfigAlert(false, d.message);
+          return;
+        }
+        showConfigAlert(true);
+        setStatus('running', d.message);
+        btnRun.disabled = true;
+        btnRun.innerHTML = '<span class="spinner"></span> 生成中…';
+        if (!pollTimer) pollTimer = setInterval(fetchStatus, 3000);
+        fetchStatus();
+      } catch (e) {
+        alert('请求失败：' + e.message);
+      }
+    });
+
+    function applyAvailableProviders(available) {
+      if (!Array.isArray(available) || !available.length) return;
+      const tabs = document.getElementById('providerTabs');
+      if (!tabs) return;
+      tabs.querySelectorAll('input[name="provider"]').forEach(function (radio) {
+        const label = radio.closest('label');
+        const ok = available.indexOf(radio.value) !== -1;
+        radio.disabled = !ok;
+        label.style.opacity = ok ? '' : '0.6';
+        label.title = ok ? '' : '未在 config.json 中配置该服务的 API Key';
+      });
+    }
+
+    (async () => {
+      try {
+        const r = await fetch('/api/config-check');
+        const d = await r.json();
+        showConfigAlert(d.ok, d.message);
+        if (d.available_providers) applyAvailableProviders(d.available_providers);
+      } catch (_) {}
+      await fetchStatus();
+    })();
+  </script>
+</body>
+</html>

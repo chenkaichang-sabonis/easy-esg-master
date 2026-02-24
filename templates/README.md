@@ -1,9 +1,6 @@
 # 模板目录
 
-将以下文件放入此目录：
-
-- `ESG研报模板.docx` — Word 报告模板（必需）
-- `ESG研报模板.pptx` — PPT 报告模板（必需，每次输出均包含 Word 与 PPT）
+将 Word 与 PPT 报告模板放入此目录。文件名在 `core/utils.py` 中通过 `TEMPLATE_DOCX_FILENAME`、`TEMPLATE_PPTX_FILENAME` 配置，若已重命名模板请修改该处。
 
 ---
 

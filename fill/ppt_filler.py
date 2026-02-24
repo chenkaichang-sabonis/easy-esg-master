@@ -10,9 +10,11 @@ import zipfile
 from pathlib import Path
 
 try:
-    from core.utils import find_latest_report_json
+    from core.utils import find_latest_report_json, get_template_path, OUTPUT_BASE
 except ImportError:
     find_latest_report_json = None
+    get_template_path = None
+    OUTPUT_BASE = "output"
 
 from .word_filler import load_json_report, build_replacements
 
@@ -26,8 +28,11 @@ def _have_pptx():
 
 
 def _default_template_path():
-    p = Path("templates/ESG研报模板.pptx")
-    return p if p.exists() else Path("ESG研报模板.pptx")
+    if get_template_path:
+        return Path(get_template_path("pptx"))
+    # 与 core.utils 中 TEMPLATE_PPTX_FILENAME 保持一致
+    p = Path("templates/国信模板.pptx")
+    return p if p.exists() else Path("国信模板.pptx")
 
 
 def _date_part_from_stem(stem):
@@ -445,15 +450,15 @@ def fill_ppt_template(json_path=None, template_path=None, output_path=None):
     """
     填充 PPT 模板。
     json_path: 报告 JSON，None 时自动查找最新 *_报告.json
-    template_path: 模板路径，None 时用 templates/ESG研报模板.pptx 或根目录
+    template_path: 模板路径，None 时由 core.utils.get_template_path 获取（国信模板）
     output_path: 输出路径，None 时与 JSON 同目录、{日期}_最终版.pptx
     返回 (success: bool, output_path: Path)
     """
     template_path = Path(template_path) if template_path else _default_template_path()
-    output_dir = Path("output")
-    output_dir.mkdir(exist_ok=True)
+    output_dir = Path(OUTPUT_BASE)
+    output_dir.mkdir(parents=True, exist_ok=True)
     if json_path is None:
-        json_path = find_latest_report_json(output_dir) if find_latest_report_json else None
+        json_path = find_latest_report_json() if find_latest_report_json else None
         if not json_path:
             json_files = list(output_dir.glob("**/*_报告.json")) or list(Path(".").glob("**/*_报告.json"))
             json_path = max(json_files, key=lambda p: p.stat().st_mtime) if json_files else None

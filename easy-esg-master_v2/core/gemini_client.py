@@ -5,16 +5,12 @@ Gemini API 客户端模块
 封装与 Google Gemini API 的交互功能
 """
 import time
-from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 from google import genai
 from google.genai import types
 from .utils import safe_print
 
 # 长请求超时（毫秒），避免热点聚焦/合并等长 prompt 触发 SDK 默认约 60s 超时
 HTTP_TIMEOUT_MS = 300000  # 5 分钟
-# Deep Research：create/get 单次调用超时（秒），防止 SDK 无响应时无限卡住
-CREATE_TIMEOUT_SEC = 120
-POLL_GET_TIMEOUT_SEC = 90
 
 
 class GeminiClient:
@@ -51,19 +47,11 @@ class GeminiClient:
         safe_print(f"\n[{domain_name}] 开始 Deep Research...")
         
         try:
-            def _create():
-                return self.client.interactions.create(
-                    input=prompt,
-                    agent=self.agent,
-                    background=True
-                )
-            with ThreadPoolExecutor(max_workers=1) as ex:
-                fut = ex.submit(_create)
-                try:
-                    initial_interaction = fut.result(timeout=CREATE_TIMEOUT_SEC)
-                except FuturesTimeoutError:
-                    safe_print(f"[{domain_name}] 错误：创建任务超时（{CREATE_TIMEOUT_SEC} 秒），请检查网络或稍后重试")
-                    raise Exception(f"interactions.create 超时（{CREATE_TIMEOUT_SEC}s）")
+            initial_interaction = self.client.interactions.create(
+                input=prompt,
+                agent=self.agent,
+                background=True
+            )
             
             interaction_id = initial_interaction.id
             safe_print(f"[{domain_name}] 研究任务已启动，Interaction ID: {interaction_id}")
@@ -74,16 +62,7 @@ class GeminiClient:
             
             while True:
                 poll_count += 1
-                def _get():
-                    return self.client.interactions.get(interaction_id)
-                with ThreadPoolExecutor(max_workers=1) as ex:
-                    fut = ex.submit(_get)
-                    try:
-                        interaction = fut.result(timeout=POLL_GET_TIMEOUT_SEC)
-                    except FuturesTimeoutError:
-                        safe_print(f"[{domain_name}] [轮询 {poll_count}] 获取状态超时（{POLL_GET_TIMEOUT_SEC}s），将重试…")
-                        time.sleep(5)
-                        continue
+                interaction = self.client.interactions.get(interaction_id)
                 status = interaction.status
                 
                 # 尝试获取迭代次数信息（仅用于显示）
@@ -96,12 +75,15 @@ class GeminiClient:
                     if isinstance(interaction.metadata, dict):
                         current_step_count = interaction.metadata.get('step_count') or interaction.metadata.get('steps')
                 
-                # 每次轮询都打印状态，避免“无输出”像卡住
+                # 记录迭代次数变化
                 if current_step_count is not None and current_step_count != last_step_count:
                     last_step_count = current_step_count
                     safe_print(f"[{domain_name}] [轮询 {poll_count}] 迭代次数: {current_step_count}, 状态: {status}")
-                else:
-                    safe_print(f"[{domain_name}] [轮询 {poll_count}] 状态: {status}")
+                elif poll_count % 3 == 0:  # 每3次轮询打印一次状态
+                    if current_step_count is not None:
+                        safe_print(f"[{domain_name}] [轮询 {poll_count}] 迭代次数: {current_step_count}, 状态: {status}")
+                    else:
+                        safe_print(f"[{domain_name}] [轮询 {poll_count}] 状态: {status}")
                 
                 if status == "completed":
                     final_step_count = current_step_count if current_step_count is not None else last_step_count
